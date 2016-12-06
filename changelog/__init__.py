@@ -4,34 +4,44 @@ import subprocess
 from sys import argv
 from os import path
 
-PATH = argv[1:][0]
+PATH = '/home/risca/Annex/document'
 
 def run(command):
-    """Interface for running shell commands"""
+    """Just an interface for running shell commands"""
     runner = command
     exe = subprocess.Popen(runner, stdout=subprocess.PIPE)
     out, err = exe.communicate()
     return [out, err, exe.returncode]
 
-COMMITS = run(['git', 'log', '--format="%H"', PATH])[0].strip().replace('"', \
-                '').split('\n')
-#print COMMITS
+def shaname(_commit, filepath):
+    """Return the sha of a certain filepath at a certain commit history"""
+    pointer = run(['git', 'show', '{0}:{1}'.format(_commit, filepath)])
+    return path.basename(pointer[0])
 
-def shaname(commit, filepath):
-    """Return the file's sha at a certain commit"""
-    pointer = run(['git', 'show', '{0}:{1}'.format(commit, filepath)])[0]
-    return path.basename(pointer)
-
-def sha_exists(sha):
-    """Return true if the file exists"""
-    command = ['git', 'annex', 'whereis', '--key', sha]
+def sha_exists(_sha):
+    """Return true if the sha file exists on any reposiroty"""
+    command = ['git', 'annex', 'whereis', '--key', _sha]
     test = run(command)
-    return test[2]
+    return not test[2]
 
 def allshaname(filepath):
-    """Return all file's sha associated to a path"""
-    info = run(['git', 'log', '--format="%H"', PATH])[0]
+    """Return all commit where the filepath has been changed"""
+    info = run(['git', 'log', '--format="%H"', filepath])[0]
     commits = info.strip().replace('"', '').split('\n')
-    for commit in commits:
-        print shaname(commit, filepath)
+    return commits
+
+
+
+if __name__ == "__main__":
+    """Usage:
+
+    python myscript 'Path/Of/File'
+
+    It will return all sha still available"""
+    PATH = argv[1:][0]
+    print PATH
+    for commit in allshaname(PATH):
+        sha = shaname(commit, PATH)
+        if sha_exists(sha):
+            print 'change at {} with {}'.format(commit, sha)
 
